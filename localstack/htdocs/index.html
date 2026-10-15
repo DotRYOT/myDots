@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My Projects</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 2rem;
+      font: 16px/1.5 system-ui, sans-serif;
+      background: #0f1115; color: #e6e6e6;
+    }
+    header { max-width: 1100px; margin: 0 auto 2rem; }
+    h1 { margin: 0 0 .25rem; }
+    #status { color: #8b93a7; margin: 0 0 1rem; }
+    #search {
+      width: 100%; max-width: 320px; padding: .6rem .8rem;
+      border: 1px solid #2a2f3a; border-radius: 8px;
+      background: #171a21; color: inherit;
+    }
+    #grid {
+      max-width: 1100px; margin: 0 auto;
+      display: grid; gap: 1rem;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    }
+    .card {
+      display: block; padding: 1.25rem;
+      border: 1px solid #2a2f3a; border-radius: 12px;
+      background: #171a21; color: inherit; text-decoration: none;
+      transition: transform .15s, border-color .15s;
+    }
+    .card:hover { transform: translateY(-3px); border-color: #5b8def; }
+    .card h2 {
+      margin: 0 0 .5rem; font-size: 1.05rem;
+      overflow-wrap: anywhere;
+    }
+    .card span { color: #8b93a7; font-size: .85rem; }
+    .card.no-index span { color: #d9a441; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>My Projects</h1>
+    <p id="status">Scanning htdocs…</p>
+    <input id="search" type="search" placeholder="Filter projects…" disabled>
+  </header>
+
+  <main id="grid"></main>
+
+  <script>
+    const grid   = document.getElementById('grid');
+    const status = document.getElementById('status');
+    const search = document.getElementById('search');
+
+    let projects = [];
+
+    async function loadProjects() {
+      try {
+        const response = await fetch('api.php', { cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const data = await response.json();   // ← PHP array becomes JS array
+        projects = data.projects;
+
+        search.disabled = false;
+        render('');
+      } catch (err) {
+        status.textContent =
+          `Could not load projects: ${err.message}. Is Apache/PHP running?`;
+      }
+    }
+
+    function render(query = '') {
+      const q = query.trim().toLowerCase();
+      const visible = projects.filter(p => p.name.toLowerCase().includes(q));
+
+      grid.replaceChildren();
+
+      status.textContent = visible.length
+        ? `${visible.length} project${visible.length === 1 ? '' : 's'}`
+        : 'No matching projects.';
+
+      for (const project of visible) {
+        const card = document.createElement('a');
+        card.href = project.url;
+        card.className = 'card' + (project.hasIndex ? '' : ' no-index');
+
+        const title = document.createElement('h2');
+        title.textContent = project.name;
+
+        const meta = document.createElement('span');
+        meta.textContent = project.hasIndex
+          ? 'Open project →'
+          : 'No index file found';
+
+        card.append(title, meta);
+        grid.append(card);
+      }
+    }
+
+    search.addEventListener('input', e => render(e.target.value));
+
+    loadProjects();
+  </script>
+</body>
+</html>
